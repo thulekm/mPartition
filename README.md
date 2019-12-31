@@ -19,12 +19,12 @@ The mPartition program is available for Linux operating system.<br>
 Note that the setup.py program will create a new config.py file.<br>
 
 <b>IV.	Commands</b><br>
-<i>python mPartitions.py -f [alignment] -t [minimum_length] -mset [set_of_models] </i><br><br>
-The partition scheme will be written to the file Output/Results/par.[alignment]<br><br>
+<i>python mPartitions.py -f [alignment] -t [minimum_length] -mset [set_of_models] </i><br>
+The partition scheme will be written to the file Output/Results/par.[alignment]
 
 <i>-f</i> &emsp;&emsp;The path to a DNA or protein alignment in Phylip format.<br>
 <i>-t</i> &emsp;&emsp;The minimum length of a subset (default = 50)<br>
-<i>-mset</i>&emsp;A set of substitution models separated by ‘,’ to select the best-fit model for a subset.<br>
+<i>-mset</i>&emsp;A set of substitution models separated by â€˜,â€™ to select the best-fit model for a subset.<br>
 &emsp;&emsp;&emsp;The default model set for DNA: JC69,F81,HKY,GTR; and for amino acid: LG,JTT,WAG.<br>
 
  
