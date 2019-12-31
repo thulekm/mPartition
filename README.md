@@ -19,7 +19,7 @@ The mPartition program is available for Linux operating system.<br>
 Note that the setup.py program will create a new config.py file.<br>
 
 <b>IV.	Commands</b><br>
-<i>python mPartitions.py -f [alignment] -t [minimum_length] -mset [set_of_models] </i><br>
+<i>python mPartitions.py -f [alignment] -t [minimum_length] -mset [set_of_models] </i><br><br>
 The partition scheme will be written to the file Output/Results/par.[alignment]
 
 <i>-f</i> &emsp;&emsp;The path to a DNA or protein alignment in Phylip format.<br>
