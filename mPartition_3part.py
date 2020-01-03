@@ -311,46 +311,10 @@ if checkstate == 1 and ratetype == 1:
 	line += ";"
 	parFile.write(line+"\nend;")
 	parFile.close()
-	command = iqtree_path+"iqtree -s "+newfile+" -m MFP -mset "+mset+" -spp "+output+"/S1_Par_"+treefn+" -pre "+output+"/"+treefn+"\n"
+	command = iqtree_path+"iqtree -s "+newfile+" -m MFP -fast -mset "+mset+" -spp "+output+"/S1_Par_"+treefn+" -pre "+output+"/"+treefn+"\n"
 	os.system(command)
 	if not os.path.isfile(output+"/"+treefn+"_AICc.iqtree"):
-		command = iqtree_path+"iqtree -s "+newfile+" -m MFP -mset "+mset+" -pre "+output+"/"+treefn+"_AICc\n"
-		os.system(command)
-	
-elif checkstate == 1 and ratetype == 2:
-	i = 1
-	ratefile = open(output+"/rate_"+treefn,"r")
-	for line in ratefile:
-		if float(line.strip()) > a2nd_avg:
-			par3.append(i)
-		elif float(line.strip()) > avg_rate and float(line.strip()) <= a2nd_avg:
-			par2.append(i)
-		else:
-			par1.append(i)
-		i = i + 1
-	ratefile.close()
-	parFile = open(output+"/S1_Par_"+treefn,"w")
-	parFile.write("#nexus\nbegin sets;\n")
-	line = "charset Par1 ="
-	for p in par1:
-		line += " "+str(p)
-	line += ";"
-	parFile.write(line+"\n")
-	line = "charset Par2 ="
-	for p in par2:
-		line += " "+str(p)
-	line += ";"
-	parFile.write(line+"\n")
-	line = "charset Par3 ="
-	for p in par3:
-		line += " "+str(p)
-	line += ";"
-	parFile.write(line+"\nend;")
-	parFile.close()
-	command = iqtree_path+"iqtree -s "+newfile+" -m MFP -mset "+mset+" -spp "+output+"/S1_Par_"+treefn+" -pre "+output+"/"+treefn+"\n"
-	os.system(command)
-	if not os.path.isfile(output+"/"+treefn+"_AICc.iqtree"):
-		command = iqtree_path+"iqtree -s "+newfile+" -m MFP -mset "+mset+" -pre "+output+"/"+treefn+"_AICc\n"
+		command = iqtree_path+"iqtree -s "+newfile+" -m MFP -fast -mset "+mset+" -pre "+output+"/"+treefn+"_AICc\n"
 		os.system(command)
 	
 model =""
@@ -523,13 +487,13 @@ if(os.path.isfile(output+"/"+treefn+"_G1.sitelh") and os.path.isfile(output+"/"+
 		#os.system("mv "+output+"/"+treefn+"_Par2 "+output+"/"+treefn+"P2")
 		command = ""
 		if(os.path.isfile(output+"/"+treefn+"P1")):
-			command = iqtree_path+"iqtree -s "+output+"/"+treefn+"P1 -m MFP -mset "+mset+"  -pre "+output+"/"+treefn+"P1_AICc\n"
+			command = iqtree_path+"iqtree -s "+output+"/"+treefn+"P1 -m MFP -fast -mset "+mset+"  -pre "+output+"/"+treefn+"P1_AICc\n"
 			os.system(command)
 		if(os.path.isfile(output+"/"+treefn+"P2")):
-			command = iqtree_path+"iqtree -s "+output+"/"+treefn+"P2 -m MFP -mset "+mset+"  -pre "+output+"/"+treefn+"P2_AICc\n"
+			command = iqtree_path+"iqtree -s "+output+"/"+treefn+"P2 -m MFP -fast -mset "+mset+"  -pre "+output+"/"+treefn+"P2_AICc\n"
 			os.system(command)
 		if(os.path.isfile(output+"/"+treefn+"P3")):
-			command = iqtree_path+"iqtree -s "+output+"/"+treefn+"P3 -m MFP -mset "+mset+"  -pre "+output+"/"+treefn+"P3_AICc\n"
+			command = iqtree_path+"iqtree -s "+output+"/"+treefn+"P3 -m MFP -fast -mset "+mset+"  -pre "+output+"/"+treefn+"P3_AICc\n"
 			os.system(command)
 		
 		aic = 0.0
