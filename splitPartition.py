@@ -28,41 +28,37 @@ def line_prepender(filename, line):
 		f.seek(0, 0)
 		f.write(line.rstrip('\r\n') + '\n' + content)
 
-#def count_str(filename, char):
-#	with open(filename, 'r+') as f:
-#		content = f.read()
-#		return content.count("=")
 
-wp = open(parFile,"r")
-z = 1
-for line in wp:
+parF = open(parFile,"r")
+parNum = 1
+for line in parF:
 	if "=" in line:
-		#par1 = []
-		dt = line.split("=")[1].strip().replace(";","").replace(",","")
-		dt1 = dt.split(" ")
+		siteArr = line.split("=")[1].strip().replace(";","").replace(",","")
+		siteList = siteArr.split(" ")
 		if os.path.isfile(filex+"P"+str(z)):
 			os.system("rm "+filex+"P"+str(z))
-		par = open(filex+"P"+str(z),"w")
+		par = open(filex+"P"+str(parNum),"w")
 		fil = open(filex,"r")
-		seq = 0
-		i = 0
+		noOfTax = 0
 		for lx in fil:
-			if i > 0:
+			if noOfTax > 0:
 				if " " in lx:
 					seq1 = lx.split(" ",1)
 					par.write(str(seq1[0].strip())+" ")
-					for x in dt1:
-						par.write(seq1[1].strip()[int(x.strip())-1])
+					seqContent = seq1[1].strip()
+					for x in siteList:
+						par.write(seqContent[int(x.strip())-1])
 					par.write("\n")
 				elif "\t" in lx:
 					seq1 = lx.split("\t",1)
 					par.write(str(seq1[0].strip())+" ")
-					for x in dt1:
-						par.write(seq1[1].strip()[int(x.strip())-1])
+					seqContent = seq1[1].strip()
+					for x in siteList:
+						par.write(seqContent[int(x.strip())-1])
 					par.write("\n")
-			i += 1
+			noOfTax += 1
 		fil.close()
 		par.close()
-		line_prepender(filex+"P"+str(z), str(i-1)+" "+str(len(dt1)))
-		z = z+1
-wp.close()
+		line_prepender(filex+"P"+str(z), str(noOfTax-1)+" "+str(len(siteList)))
+		parNum = parNum+1
+parF.close()
