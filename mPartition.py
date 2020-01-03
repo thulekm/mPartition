@@ -186,5 +186,9 @@ if(os.path.isfile(output + "/par."+treefn)):
 	finishParfile.write("end;\n")
 	finishParfile.close()	
 	os.system("rm "+output + "/par."+treefn+"_parf_*")
+if(not os.path.isdir("Results")):
+	os.system("mkdir Results")
+os.system("cp "+output+"/Results/*.* Results/")
+os.system("rm -rf "+output+"/Results")
 #os.system("rm *"+treefn+"*.bsub")
-os.system("rm "+output+"/*"+treefn+"*")
+os.system("rm "+output+"/"+treefn+"*")
