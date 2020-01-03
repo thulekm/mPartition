@@ -333,7 +333,7 @@ print("Second Best Model: "+second_model+" | Treefile: "+output+"/"+treefn+".tre
 print("Third Best Model: "+third_model+" | Treefile: "+output+"/"+treefn+".treefile\n")
 
 if treefile == "NOTTREE":
-	os.system("cp "+output+"/"+treefn+".treefile "+output+"/"+treefn+".tree")
+	os.system("cp "+output+"/"+treefn+"_AICc.treefile "+output+"/"+treefn+".tree")
 	treefile = output+"/"+treefn+".tree"
 
 
@@ -481,13 +481,13 @@ if(os.path.isfile(output+"/"+treefn+"_G1.sitelh") and os.path.isfile(output+"/"+
 		#os.system("mv "+output+"/"+treefn+"_Par2 "+output+"/"+treefn+"P2")
 		command = ""
 		if(os.path.isfile(output+"/"+treefn+"P1")):
-			command = iqtree_path+"iqtree -s "+output+"/"+treefn+"P1 -m MFP -fast -mset "+mset+"  -pre "+output+"/"+treefn+"P1_AICc\n"
+			command = iqtree_path+"iqtree -s "+output+"/"+treefn+"P1 -m MFP -fast -mset "+mset+" -t "+treefile+"  -pre "+output+"/"+treefn+"P1_AICc\n"
 			os.system(command)
 		if(os.path.isfile(output+"/"+treefn+"P2")):
-			command = iqtree_path+"iqtree -s "+output+"/"+treefn+"P2 -m MFP -fast -mset "+mset+"  -pre "+output+"/"+treefn+"P2_AICc\n"
+			command = iqtree_path+"iqtree -s "+output+"/"+treefn+"P2 -m MFP -fast -mset "+mset+" -t "+treefile+"  -pre "+output+"/"+treefn+"P2_AICc\n"
 			os.system(command)
 		if(os.path.isfile(output+"/"+treefn+"P3")):
-			command = iqtree_path+"iqtree -s "+output+"/"+treefn+"P3 -m MFP -fast -mset "+mset+"  -pre "+output+"/"+treefn+"P3_AICc\n"
+			command = iqtree_path+"iqtree -s "+output+"/"+treefn+"P3 -m MFP -fast -mset "+mset+" -t "+treefile+"  -pre "+output+"/"+treefn+"P3_AICc\n"
 			os.system(command)
 		
 		aic = 0.0
