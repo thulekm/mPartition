@@ -24,7 +24,6 @@ parser.add_argument("-f", "--filex", help="The alignment file")
 parser.add_argument("-t", "--treefile", help="The tree file")
 parser.add_argument("-tiger", "--tiger", help="The tiger file")
 parser.add_argument("-m", "--maxlength", help="Max length of sequences")
-parser.add_argument("-r", "--ratetype", help="Site rate type")
 parser.add_argument("-p", "--parfile", help="Partition file")
 parser.add_argument("-tper", "--tper", help="Percent - minimum length")
 parser.add_argument("-mset", "--mset", help="mset model, separated by commas")
@@ -39,11 +38,6 @@ if args.treefile:
 else:
 	treefile = "NOTTREE"
 	
-ratetype = 1
-if args.ratetype:
-	ratetype = int(args.ratetype)
-else:
-	ratetype = 1
 
 tig_rate = "0"
 if args.tiger:
@@ -245,7 +239,7 @@ else:
 par1 = []
 par2 = []
 par3 = []
-if checkstate == 1 and ratetype == 1:
+if checkstate == 1:
 	
 	newList = sorted(rvalue)
 	if int(round(len(rvalue)*1/100))-1 >= 50:
@@ -441,19 +435,19 @@ if(os.path.isfile(output+"/"+treefn+"_G1.sitelh") and os.path.isfile(output+"/"+
 	else:
 		parFile = open(output+"/F1_Par_"+treefn,"w")
 		if len(par1)>0:
-			line = "Par1 ="
+			line = "P1 ="
 			for p in par1:
 				line += " "+str(p)+","
 			line += ""
 			parFile.write(line.strip(",")+"\n")
 		if len(par2)>0:
-			line = "Par2 ="
+			line = "P2 ="
 			for p in par2:
 				line += " "+str(p)+","
 			line += ""
 			parFile.write(line.strip(",")+"\n")
 		if len(par3)>0:
-			line = "Par3 ="
+			line = "P3 ="
 			for p in par3:
 				line += " "+str(p)+","
 			line += ""
@@ -462,23 +456,23 @@ if(os.path.isfile(output+"/"+treefn+"_G1.sitelh") and os.path.isfile(output+"/"+
 		#os.system("python extractPartitions.py -f "+filex+" -p "+output+"/F1_Par_"+treefn+" -o "+output)
 		os.system("python splitPartition.py -f "+newfile+" -p "+output+"/F1_Par_"+treefn+"")
 		
-		if(os.path.isfile(path+""+treefn+"P1")):
+		if(os.path.isfile(path+""+treefn+"P1") and not os.path.isfile(output+"/"+treefn+"P1")):
 			os.system("cp "+path+""+treefn+"P1 "+output+"/"+treefn+"P1")
 			os.system("rm "+path+""+treefn+"P1")
-		if(os.path.isfile(path+""+treefn+"P2")):
+		if(os.path.isfile(path+""+treefn+"P2") and not os.path.isfile(output+"/"+treefn+"P2")):
 			os.system("cp "+path+""+treefn+"P2 "+output+"/"+treefn+"P2")
 			os.system("rm "+path+""+treefn+"P2")
-		if(os.path.isfile(path+""+treefn+"P3")):
+		if(os.path.isfile(path+""+treefn+"P3") and not os.path.isfile(output+"/"+treefn+"P3")):
 			os.system("cp "+path+""+treefn+"P3 "+output+"/"+treefn+"P3")
 			os.system("rm "+path+""+treefn+"P3")
 		
-		if(os.path.isfile(output+"/ck"+treefn+"P1")):
+		if(os.path.isfile(output+"/ck"+treefn+"P1") and not os.path.isfile(output+"/"+treefn+"P1")):
 			os.system("cp "+output+"/ck"+treefn+"P1 "+output+"/"+treefn+"P1")
 			os.system("rm "+output+"/ck"+treefn+"P1")
-		if(os.path.isfile(output+"/ck"+treefn+"P2")):
+		if(os.path.isfile(output+"/ck"+treefn+"P2") and not os.path.isfile(output+"/"+treefn+"P2")):
 			os.system("cp "+output+"/ck"+treefn+"P2 "+output+"/"+treefn+"P2")
 			os.system("rm "+output+"/ck"+treefn+"P2")
-		if(os.path.isfile(output+"/ck"+treefn+"P3")):
+		if(os.path.isfile(output+"/ck"+treefn+"P3") and not os.path.isfile(output+"/"+treefn+"P3")):
 			os.system("cp "+output+"/ck"+treefn+"P3 "+output+"/"+treefn+"P3")
 			os.system("rm "+output+"/ck"+treefn+"P3")
 		

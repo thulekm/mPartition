@@ -30,14 +30,14 @@ def line_prepender(filename, line):
 
 
 parF = open(parFile,"r")
-parNum = 1
 for line in parF:
 	if "=" in line:
 		siteArr = line.split("=")[1].strip().replace(";","").replace(",","")
+		parname = line.split("=")[0].strip()
 		siteList = siteArr.split(" ")
-		if os.path.isfile(filex+"P"+str(z)):
-			os.system("rm "+filex+"P"+str(z))
-		par = open(filex+"P"+str(parNum),"w")
+		if os.path.isfile(filex+str(parname)):
+			os.system("rm "+filex+str(parname))
+		par = open(filex+str(parname),"w")
 		fil = open(filex,"r")
 		noOfTax = 0
 		for lx in fil:
@@ -59,6 +59,5 @@ for line in parF:
 			noOfTax += 1
 		fil.close()
 		par.close()
-		line_prepender(filex+"P"+str(z), str(noOfTax-1)+" "+str(len(siteList)))
-		parNum = parNum+1
+		line_prepender(filex+str(parname), str(noOfTax-1)+" "+str(len(siteList)))
 parF.close()

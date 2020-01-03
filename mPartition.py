@@ -21,7 +21,6 @@ parser = argparse.ArgumentParser(description = text)
 jobIds = arr.array('i')
 
 parser.add_argument("-f", "--filex", help="The alignment file")
-parser.add_argument("-r", "--ratetype", help="Site rate type")
 parser.add_argument("-o", "--output", help="Output directory")
 parser.add_argument("-t", "--tper", help="Minimum length")
 parser.add_argument("-mset", "--mset", help="mset model")
@@ -40,11 +39,21 @@ cdna = open(filex,"r")
 zz = 0
 for ll in cdna:
 	if zz == 1:
+		ll = ll.upper()
 		if " " in ll:
 			if len(ll.split(" ",1)[1].strip()) == ll.split(" ",1)[1].strip().count("-") or len(ll.split(" ",1)[1].strip()) == ll.split(" ",1)[1].strip().count("N"):
 				zz = zz-1
 			else:
-				seq = ll.split(" ",1)[1].strip().replace("A","").replace("T","").replace("G","").replace("C","").replace("X","").replace("-","")
+				seq = ll.split(" ",1)[1].strip().replace("A","").replace("T","").replace("G","").replace("C","").replace("X","").replace("-","").replace("N","")
+				if len(seq) > 0:
+					prot = 0
+				else:
+					prot = 1
+		elif "\t" in ll:
+			if len(ll.split("\t",1)[1].strip()) == ll.split("\t",1)[1].strip().count("-") or len(ll.split("\t",1)[1].strip()) == ll.split("\t",1)[1].strip().count("N"):
+				zz = zz-1
+			else:
+				seq = ll.split("\t",1)[1].strip().replace("A","").replace("T","").replace("G","").replace("C","").replace("X","").replace("-","").replace("N","")
 				if len(seq) > 0:
 					prot = 0
 				else:
@@ -84,12 +93,6 @@ if not os.path.isdir("logs"):
 	os.system(cmd)
 else:
 	print("logs is exists")
-
-ratetype = 1
-if args.ratetype:
-	ratetype = int(args.ratetype)
-else:
-	ratetype = 1
 	
 
 ###CREATE Results Folder####
@@ -123,7 +126,7 @@ treefile = output+"/"+treefn+".tree"
 while len(alignList) > 0:
 	for align in alignList:
 		if num_run == 1 and len(alignList) == 1:
-			command = "python mPartition_3part.py -f "+align+" -m "+str(maxlength)+" -tper "+str(tper)+" -mset "+mset+" -r "+str(ratetype)+" -o "+output
+			command = "python mPartition_3part.py -f "+align+" -m "+str(maxlength)+" -tper "+str(tper)+" -mset "+mset+" -o "+output
 			os.system(command)
 
 			extS = 0
@@ -142,7 +145,7 @@ while len(alignList) > 0:
 		else:
 			parfile = output + "/par."+treefn
 			tiger_file = "rate_"+treefn
-			command = "python mPartition_3part.py -f "+align+" -m "+str(maxlength)+" -tiger "+tiger_file+" -tper "+str(tper)+" -mset "+mset+" -t "+treefile+" -p "+parfile+" -r "+str(ratetype)+" -o "+output
+			command = "python mPartition_3part.py -f "+align+" -m "+str(maxlength)+" -tiger "+tiger_file+" -tper "+str(tper)+" -mset "+mset+" -t "+treefile+" -p "+parfile+" -o "+output
 
 			os.system(command)
 			extS = 0
@@ -183,5 +186,5 @@ if(os.path.isfile(output + "/par."+treefn)):
 	finishParfile.write("end;\n")
 	finishParfile.close()	
 	os.system("rm "+output + "/par."+treefn+"_parf_*")
-os.system("rm *"+treefn+"*.bsub")
-os.system("rm "+output+"/"+treefn+"*")
+#os.system("rm *"+treefn+"*.bsub")
+os.system("rm "+output+"/*"+treefn+"*")
