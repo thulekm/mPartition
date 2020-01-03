@@ -26,7 +26,7 @@ The partition scheme will be written to the file Output/Results/par.[alignment]
 <i>-t</i> &emsp;&emsp;The minimum length of a subset (default = 50) (optional)<br>
 <i>-mset</i>&emsp;A set of substitution models separated by ‘,’ to select the best-fit model for a subset. (optional)<br>
 &emsp;&emsp;&emsp;The default model set for DNA: JC69,F81,HKY,GTR; and for amino acid: LG,JTT,WAG.<br>
-<i><b>Example:</b> python mPartition.py -f example.phy</i>
+<br><i><b>Example:</b> python mPartition.py -f example.phy</i>
 
  
 
