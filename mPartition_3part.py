@@ -11,6 +11,9 @@ import subprocess
 import time
 import array as arr
 import config
+import random
+import numpy as np
+import string
 #import runCommand
 
 import argparse
@@ -28,6 +31,10 @@ parser.add_argument("-p", "--parfile", help="Partition file")
 parser.add_argument("-tper", "--tper", help="Percent - minimum length")
 parser.add_argument("-mset", "--mset", help="mset model, separated by commas")
 parser.add_argument("-o", "--output", help="The output directory")
+parser.add_argument("-s", "--strategy", help="The strategy to choose partition")
+parser.add_argument("-inv", "--inv", help="The invariant site list file")
+parser.add_argument("-prot", "--prot", help="protein: 1, DNA: 0")
+
 # read arguments from the command line
 args = parser.parse_args()
 
@@ -38,10 +45,21 @@ if args.treefile:
 else:
 	treefile = "NOTTREE"
 	
+strategy = 2
+if args.strategy:
+	strategy = args.strategy
+
+prot = 1
+if args.prot:
+	prot = int(args.prot)
 
 tig_rate = "0"
 if args.tiger:
 	tig_rate = args.tiger
+	
+invF = "0"
+if args.inv:
+	invF = args.inv
 
 #iqtree_path = "$IQTREE/" #IQ-TREE path including splash
 #tiger_path = "/home/lkthu/Partitions/tiger_original/"
@@ -49,7 +67,10 @@ if args.tiger:
 iqtree_path = config.iqtree_path
 tiger_path = config.tiger_path
 
-mset = "LG,WAG"
+RANPROB = 0.1 #probability that a site is assigned to a group randomly
+
+#mset = "LG,WAG"
+mset = "JC69,HKY,GTR"
 if args.mset:
 	mset = args.mset
 
@@ -60,13 +81,19 @@ if args.tper:
 if tper >= 50: 
 	sys.exit("The minimum percent parameter must be less than 50.")
 
+f = open(filex)
+line = f.readline()
+f.close()
+currLength = 0
+if " " in line:
+	currLength = int(line.split(" ",1)[1].strip())
+elif "\t" in line:
+	currLength = int(line.split("\t",1)[1].strip())
+
 if args.maxlength:
 	maxlength = int(args.maxlength)
 else:
-	f = open(filex)
-	line = f.readline()
-	f.close()
-	maxlength = int(line.split(" ",1)[1].strip())
+	maxlength = currLength
 
 if not os.path.isdir(output):
 	cmd = 'mkdir '+output
@@ -162,6 +189,92 @@ def removeGapsPhylip(filex):
 		tax = tax - t
 		line_prepender(output+"/"+treefn,str(tax)+" "+str(sitex))
 		
+def getStringIndx(string1,idx):
+	returnStr = ""
+	i = 1
+	for line in string1.split("\n"):
+		#print("line "+ str(i) + " "+str(len(line))+" "+str(idx))
+		if(len(line.strip()) >= int(idx)):
+			returnStr += line[int(idx)-1]+"\n"
+		elif(len(line.strip())>0):
+			returnStr += "error"+str(len(line.strip())) + " "+str(idx)
+			#print(str(idx) + " "+str(len(line.strip()))) 
+		i+=1
+	return returnStr
+
+def strIntersection(s1, s2):
+	out = ""
+	for c in s1:
+		if c in s2 and not c in out:
+			out += c
+	return out
+
+def isConst(string1,prot):
+	if prot ==0:
+		stringa = list(set(string1.upper()))
+		bases = 'ACGT'
+		ot = strIntersection(stringa,bases.upper())
+		if len(ot) <= 1:
+			return 1
+		else:
+			return 0
+	else:
+		stringa = list(set(string1.upper()))
+		bases = string.ascii_uppercase[:26]
+		result = ""
+		result = strIntersection(stringa,bases.upper())
+		if len(result) <= 1:
+			return 1
+		else:
+			return 0
+
+def getParIdx(logfile,lh1,lh2,lh3,stg):
+	v_return = 1
+	openLog = open(logfile,"a+")
+	if stg == 1: #assign to best likelihood subset
+		if lh1 > lh2 and lh1 > lh3:
+			v_return = 1
+		elif lh2 > lh3:
+			v_return = 2
+		else:
+			v_return = 3
+		openLog.write("\n"+str(stg)+"\t"+str(v_return)+"\t"+str(lh1)+"\t"+str(lh2)+"\t"+str(lh3))
+	elif stg==2: #assign to subset based on probability distribution
+		minLH = min(lh1,lh2,lh3)
+		eps1 = lh1-minLH
+		eps2 = lh2-minLH
+		eps3 = lh3-minLH
+		total = np.exp(eps1) + np.exp(eps2) + np.exp(eps3)
+		
+		prob1 = float(np.exp(eps1)/total)
+		prob2 = float(np.exp(eps2)/total)
+		randPrb = random.uniform(0, 1)
+		if randPrb <= prob1:
+			v_return = 1
+		elif randPrb <= (prob1+prob2):
+			v_return = 2
+		else:
+			v_return = 3
+		openLog.write("\n"+str(stg)+"\t"+str(v_return)+"\t"+str(lh1)+"\t"+str(lh2)+"\t"+str(lh3)+"\t"+str(randPrb)+"\t"+str(prob1)+"\t"+str(prob2)+"\t"+str(1.0-prob1-prob2))
+	else: #assign to best likelihood part with prob 1-RANPROB, random with RANPROB
+		random.seed()
+		#v_return = random.randint(1,3)
+		
+		randPrb = random.uniform(0,1)
+		if randPrb <= RANPROB:
+			random.seed()
+			v_return = random.randint(1,3)
+			openLog.write("\n"+str(stg)+"\t"+str(v_return)+"\t"+str(randPrb)+"\t"+str(RANPROB))
+		else:
+			if lh1 > lh2 and lh1 > lh3:
+				v_return = 1
+			elif lh2 > lh3:
+				v_return = 2
+			else:
+				v_return = 3
+			openLog.write("\n"+str(stg)+"\t"+str(v_return)+"\t"+str(randPrb)+"\t"+str(lh1)+"\t"+str(lh2)+"\t"+str(lh3))
+	openLog.close()
+	return v_return
 
 min_rate = 1.0
 max_rate = 0.0
@@ -193,6 +306,7 @@ if os.path.isfile(output+"/ck"+treefn):
 print(newfile)
 checkstate = 0
 rvalue = []
+ivalue = []
 min_rate = 0.0
 max_rate = 0.0
 if tig_rate == "0":
@@ -201,6 +315,51 @@ if tig_rate == "0":
 		os.system(tiger_path+"tiger -in "+output+"/"+treefn+".FASTA -f s,r -rl "+output+"/rate_"+treefn) 
 
 	os.system("rm "+output+"/"+treefn+".FASTA")
+	
+	#check inv site in original alignment
+	#seq = list of sequence content in file (not include taxon name)
+	inFile = open(filex,"r")
+	i = 1
+	numSite = 0
+	seq = ""
+	for line in inFile:
+		if i ==1:
+			if(len(line.strip())==0):
+				#print "File format's error."
+				sys.exit("File format's error.")
+			else:
+				if " " in line:
+					numSite = int(line.split(" ",1)[1].strip())
+				elif "\t" in line:
+					numSite = int(line.split("\t")[1].strip())
+		else:
+			if(len(line.strip()) > 0):
+				if " " in line:
+					if len(line.split(" ",1)[1].strip()) <> numSite:
+						#print "File format's error."
+						sys.exit("File format's error.")
+					else:
+						seq += line.split(" ",1)[1].strip()+"\n"
+				elif "\t" in line:
+					if len(line.split("\t")[1].strip()) <> numSite:
+						#saprint "File format's error"
+						sys.exit("File format's error")
+					else:
+						seq += line.split("\t")[1].strip()+"\n"
+		i += 1
+	inFile.close()
+	os.system("touch "+output+"/inv_"+treefn)
+	#lines = seq.splitlines()
+	invF = open(output+"/inv_"+treefn,"r+")
+	for i in range (0,numSite):
+		siteCi = getStringIndx(seq,i+1)
+		ivalue.append(isConst(siteCi,prot))
+		if isConst(siteCi,prot):
+			invF.write("1\n")
+		else:
+			invF.write("0\n")
+	invF.close()
+	
 	
 	if os.path.isfile(output+"/rate_"+treefn):
 		ratefile = open(output+"/rate_"+treefn,"r")
@@ -223,15 +382,26 @@ else:
 			ratefile.close()
 		else:
 			print "Rate file's not exists, please check the input file. \n"
+		if os.path.isfile(output+"/inv_"+treefn):
+			invfile = open(output+"/inv_"+treefn,"r")
+			for line in invfile:
+				ivalue.append(int(line.strip()))
+			invfile.close()
+		else:
+			print "Inv site list file's not exists, please check the input file. \n"
 	else:
 		ftiger = open(output+"/"+tig_rate,"r")
 		lines=ftiger.readlines()
 		ftiger.close()	
+		finv = open(output+"/"+invF,"r")
+		ilines = finv.readlines()
+		finv.close()
 		opar = open(parfile,"r")
 		i = 0
 		for ln in opar:
 			if ln.split(";")[1].strip() in treefn:
 				rvalue.append(float(lines[i].strip()))
+				ivalue.append(int(ilines[i].strip()))
 			i+=1	
 		opar.close()
 	checkstate = 1
@@ -285,7 +455,7 @@ if checkstate == 1:
 			else:
 				par2.append(i)
 			i = i + 1
-		ratefile.close()
+		#ratefile.close()
 	
 	parFile = open(output+"/S1_Par_"+treefn,"w")
 	parFile.write("#nexus\nbegin sets;\n")
@@ -305,10 +475,10 @@ if checkstate == 1:
 	line += ";"
 	parFile.write(line+"\nend;")
 	parFile.close()
-	command = iqtree_path+"iqtree -s "+newfile+" -m MFP -fast -mset "+mset+" -spp "+output+"/S1_Par_"+treefn+" -pre "+output+"/"+treefn+"\n"
+	command = iqtree_path+"iqtree -s "+newfile+" -m MFP -fast -mset "+mset+" -spp "+output+"/S1_Par_"+treefn+" -safe -pre "+output+"/"+treefn+" -seed 0 -redo \n"
 	os.system(command)
 	if not os.path.isfile(output+"/"+treefn+"_AICc.iqtree"):
-		command = iqtree_path+"iqtree -s "+newfile+" -m MFP -fast -mset "+mset+" -pre "+output+"/"+treefn+"_AICc\n"
+		command = iqtree_path+"iqtree -s "+newfile+" -m MFP -fast -mset "+mset+" -safe -pre "+output+"/"+treefn+"_AICc  -seed 0  -redo \n"
 		os.system(command)
 	
 model =""
@@ -351,8 +521,11 @@ def getN(fromFile):
 	with open(fromFile) as infile:
 		for line in infile:
 			if "Input data" in line.strip():
-				text += line.split(" ")[2]
-				print(text)
+				if line.count(" ")<8:
+					text += line.split(" ")[5]
+				else:
+					text += line.split(" ")[8]
+				#print(text)
 				return text
 
 #get free para
@@ -364,21 +537,25 @@ def getK(fromFile):
 				text += line.split(" ")[8]
 				return text
 
-command = iqtree_path+"iqtree -s "+newfile+" -m "+first_model+" -te "+treefile+" -wsl -pre "+output+"/"+treefn+"_G1\n"
+command = iqtree_path+"iqtree -s "+newfile+" -m "+first_model+" -te "+treefile+" -wsl -safe -pre "+output+"/"+treefn+"_G1  -seed 0 -redo \n"
 os.system(command)
-command = iqtree_path+"iqtree -s "+newfile+" -m "+second_model+" -te "+treefile+" -wsl -pre "+output+"/"+treefn+"_G2\n"
+command = iqtree_path+"iqtree -s "+newfile+" -m "+second_model+" -te "+treefile+" -wsl -safe -pre "+output+"/"+treefn+"_G2  -seed 0 -redo \n"
 os.system(command)
-command = iqtree_path+"iqtree -s "+newfile+" -m "+third_model+" -te "+treefile+" -wsl -pre "+output+"/"+treefn+"_G3\n"
+command = iqtree_path+"iqtree -s "+newfile+" -m "+third_model+" -te "+treefile+" -wsl -safe -pre "+output+"/"+treefn+"_G3  -seed 0 -redo \n"
 os.system(command)
 
 g1 = []
 g2 = []
 g3 = []
 if(os.path.isfile(output+"/"+treefn+"_G1.sitelh") and os.path.isfile(output+"/"+treefn+"_G2.sitelh") and os.path.isfile(output+"/"+treefn+"_G3.sitelh")):
+	if(os.path.isfile(output+"/siteLH/"+treefn+".sitelh")):
+		os.system("rm "+output+"/siteLH/"+treefn+".sitelh")
+	rwSite = open(output+"/siteLH/"+treefn+".sitelh","w+")
 	getG1 = open(output+"/"+treefn+"_G1.sitelh","r")
 	i = 1
 	for l in getG1:
 		if i > 1:
+			rwSite.write(l.replace("Site_Lh","G1"))
 			lh = l.split()
 			z = 1
 			for x in lh:
@@ -392,6 +569,7 @@ if(os.path.isfile(output+"/"+treefn+"_G1.sitelh") and os.path.isfile(output+"/"+
 	i = 1
 	for l in getG2:
 		if i > 1:
+			rwSite.write(l.replace("Site_Lh","G2"))
 			lh = l.split()
 			z = 1
 			for x in lh:
@@ -404,6 +582,7 @@ if(os.path.isfile(output+"/"+treefn+"_G1.sitelh") and os.path.isfile(output+"/"+
 	i = 1
 	for l in getG3:
 		if i > 1:
+			rwSite.write(l.replace("Site_Lh","G3"))
 			lh = l.split()
 			z = 1
 			for x in lh:
@@ -412,26 +591,84 @@ if(os.path.isfile(output+"/"+treefn+"_G1.sitelh") and os.path.isfile(output+"/"+
 				z+=1
 		i = i + 1
 	getG3.close()
-
+	rwSite.close()
+	
+	if(os.path.isfile(output+"/siteLH/"+treefn+".parsitelh")):
+		os.system("rm "+output+"/siteLH/"+treefn+".parsitelh")
+	
 	par1 = []
 	par2 = []
 	par3 = []
 	i = 0
 	while i < len(g1):
-		if g1[i] > g2[i] and g1[i]>g3[i]:
-			par1.append(i+1)
-		elif g2[i]>g3[i]:
-			par2.append(i+1)
+		if (ivalue[i]==1):
+			pIdx = getParIdx(output+"/siteLH/"+treefn+".parsitelh",g1[i],g2[i],g3[i],2)
 		else:
+			pIdx = getParIdx(output+"/siteLH/"+treefn+".parsitelh",g1[i],g2[i],g3[i],1)
+		if pIdx == 1:
+			par1.append(i+1)
+		elif pIdx == 2:
+			par2.append(i+1)
+		else: 
 			par3.append(i+1)
 		i += 1
-
+	print("===============PARTITIONS LENGTH AFTER USING STRATEGY===================\n")
 	print("par1: "+str(len(par1))+" | par2: "+str(len(par2))+" | par3: "+str(len(par3)))
 	
-	if (len(par1) < int((maxlength)*tper/100) and len(par1)>0) or (len(par2)>0 and len(par2) < int((maxlength)*tper/100)) or (len(par3)>0 and len(par3) < int((maxlength)*tper/100)):
-		print "Not good. Partition's length is very small."
-	elif (len(par1) + len(par2) ==0) or (len(par1) + len(par3) ==0) or (len(par3) + len(par2) ==0):
-		print "Don't need split."
+	isOk = 1
+	zlen = 0
+	if len(par1) < int((maxlength)*tper/100):
+		zlen += 1
+	
+	if len(par2) < int((maxlength)*tper/100):
+		zlen += 1
+	
+	if len(par3) < int((maxlength)*tper/100):
+		zlen += 1
+	
+	#Not Ok if 2 partitions are very small.
+	if zlen >= 2:
+		isOk = 0
+	else:
+		#if 1 partition is very small, assign it's elements to other partitions
+		if len(par1) > 0 and len(par1) < int((maxlength)*tper/100):
+			for pIx in par1:
+				if g2[pIx-1] < g3[pIx-1]:
+					par2.append(pIx)
+				else:
+					par3.append(pIx)
+			par1 = []
+			par2.sort()
+			par3.sort() 
+			print("Moving the elements of partition 1 to partition 2 and partition 3")
+		elif len(par2) > 0 and len(par2) < int((maxlength)*tper/100):
+			for pIx in par2:
+				if g1[pIx-1] < g3[pIx-1]:
+					par1.append(pIx)
+				else:
+					par3.append(pIx)
+			par2 = []
+			par1.sort()
+			par3.sort()
+			print("Moving the elements of partition 2 to partition 1 and partition 3")
+		elif len(par3) > 0 and len(par3) < int((maxlength)*tper/100):
+			for pIx in par3:
+				if g1[pIx-1] < g2[pIx-1]:
+					par1.append(pIx)
+				else:
+					par2.append(pIx)
+			par3 = []
+			par1.sort()
+			par2.sort()
+			print("Moving the elements of partition 3 to partition 2 and partition 1")
+		print("===============PARTITIONS LENGTH AFTER USING RE-ASIGNED===================\n")
+		print("par1: "+str(len(par1))+" | par2: "+str(len(par2))+" | par3: "+str(len(par3)))
+	if isOk == 0:
+		print("Can not split. Length of 3 partitions: "+str(len(par1))+"|"+str(len(par2))+"|"+str(len(par3)))
+	#if (len(par1) < int((maxlength)*tper/100) and len(par1)>0) or (len(par2)>0 and len(par2) < int((maxlength)*tper/100)) or (len(par3)>0 and len(par3) < int((maxlength)*tper/100)):
+	#	print "Not good. Partition's length is very small."
+	#elif (len(par1) + len(par2) ==0) or (len(par1) + len(par3) ==0) or (len(par3) + len(par2) ==0):
+	#	print "Don't need split."
 	else:
 		parFile = open(output+"/F1_Par_"+treefn,"w")
 		if len(par1)>0:
@@ -481,13 +718,13 @@ if(os.path.isfile(output+"/"+treefn+"_G1.sitelh") and os.path.isfile(output+"/"+
 		#os.system("mv "+output+"/"+treefn+"_Par2 "+output+"/"+treefn+"P2")
 		command = ""
 		if(os.path.isfile(output+"/"+treefn+"P1")):
-			command = iqtree_path+"iqtree -s "+output+"/"+treefn+"P1 -m MFP -fast -mset "+mset+" -t "+treefile+"  -pre "+output+"/"+treefn+"P1_AICc\n"
+			command = iqtree_path+"iqtree -s "+output+"/"+treefn+"P1 -m MFP -fast -mset "+mset+" -t "+treefile+" -safe  -seed 0  -pre "+output+"/"+treefn+"P1_AICc\n"
 			os.system(command)
 		if(os.path.isfile(output+"/"+treefn+"P2")):
-			command = iqtree_path+"iqtree -s "+output+"/"+treefn+"P2 -m MFP -fast -mset "+mset+" -t "+treefile+"  -pre "+output+"/"+treefn+"P2_AICc\n"
+			command = iqtree_path+"iqtree -s "+output+"/"+treefn+"P2 -m MFP -fast -mset "+mset+" -t "+treefile+" -safe  -seed 0 -pre "+output+"/"+treefn+"P2_AICc\n"
 			os.system(command)
 		if(os.path.isfile(output+"/"+treefn+"P3")):
-			command = iqtree_path+"iqtree -s "+output+"/"+treefn+"P3 -m MFP -fast -mset "+mset+" -t "+treefile+"  -pre "+output+"/"+treefn+"P3_AICc\n"
+			command = iqtree_path+"iqtree -s "+output+"/"+treefn+"P3 -m MFP -fast -mset "+mset+" -t "+treefile+" -safe  -seed 0 -pre "+output+"/"+treefn+"P3_AICc\n"
 			os.system(command)
 		
 		aic = 0.0
@@ -500,11 +737,39 @@ if(os.path.isfile(output+"/"+treefn+"_G1.sitelh") and os.path.isfile(output+"/"+
 				k += float(getK(output+"/"+f))
 				aic += float(getAIC(output+"/"+f))
 		AICc = aic + 2*k*(k+1)/(n-k-1)
-		FirstAICc = float(getAIC(output+"/"+treefn+"_AICc.iqtree"))
+		FirstAICc = 0
+		if(os.path.isfile(output+"/"+treefn+"_AICc.iqtree")):
+			FirstAICc = float(getAIC(output+"/"+treefn+"_AICc.iqtree"))
 		print "FirstAICc: "+str(FirstAICc)+" | New AICc: "+str(AICc)
-		if AICc > FirstAICc:
-			print "Worser."
+		
+		checkAICcFile = 1
+		if ((not os.path.isfile(output+"/"+treefn+"P1_AICc.iqtree")) and os.path.isfile(output+"/"+treefn+"P1")):
+			checkAICcFile = 0
+			print "IQ-TREE core dump ERROR - "+treefn+"P1_AICc.iqtree"
+		
+		if ((not os.path.isfile(output+"/"+treefn+"P2_AICc.iqtree")) and os.path.isfile(output+"/"+treefn+"P2")):
+			checkAICcFile = 0
+			print "IQ-TREE core dump ERROR - "+treefn+"P2_AICc.iqtree"
+		
+		if ((not os.path.isfile(output+"/"+treefn+"P3_AICc.iqtree")) and os.path.isfile(output+"/"+treefn+"P3")):
+			checkAICcFile = 0
+			print "IQ-TREE core dump ERROR - "+treefn+"P3_AICc.iqtree"
+				
+		if (not os.path.isfile(output+"/"+treefn+"_AICc.iqtree")):
+			checkAICcFile = 0
+			print "IQ-TREE core dump ERROR - "+treefn+"_AICc.iqtree"
+			
+		if checkAICcFile == 0:
+			print "IQ-TREE core dump ERROR."
+			os.system("cp "+output+"/"+treefn+"P*.log logs/")
 			os.system("rm "+output+"/"+treefn+"P*")
+			os.system("rm core.*")
+			os.system("rm "+output+"/core.*")
+		elif AICc > FirstAICc:
+			print "Worser."
+			os.system("cp "+output+"/"+treefn+"P*.log logs/")			
+			os.system("rm "+output+"/"+treefn+"P*")
+			
 			#os.system("rm "+output+"/"+treefn+"P2*")
 		else:
 			if(os.path.isfile(output+"/"+treefn+"P3") and os.path.isfile(output+"/"+treefn+"P2") and os.path.isfile(output+"/"+treefn+"P1")):
@@ -518,14 +783,20 @@ if(os.path.isfile(output+"/"+treefn+"_G1.sitelh") and os.path.isfile(output+"/"+
 				z = 1
 				for line in opar:
 					if line.split(";")[1].strip() in treefn:
-						if g1[z-1] > g2[z-1] and g1[z-1]>g3[z-1]:
-						#if g1[z-1] > g2[z-1]:
+						if z in par1:
 							ipar.write(str(i)+";"+treefn+"P1\n")
-						#else:
-						elif g2[z-1]>g3[z-1]:
+						elif z in par2:
 							ipar.write(str(i)+";"+treefn+"P2\n")
-						else:
+						elif z in par3:
 							ipar.write(str(i)+";"+treefn+"P3\n")
+						#if g1[z-1] > g2[z-1] and g1[z-1]>g3[z-1]:
+						##if g1[z-1] > g2[z-1]:
+						#	ipar.write(str(i)+";"+treefn+"P1\n")
+						##else:
+						#elif g2[z-1]>g3[z-1]:
+						#	ipar.write(str(i)+";"+treefn+"P2\n")
+						#else:
+						#	ipar.write(str(i)+";"+treefn+"P3\n")
 						z = z+1
 					else:
 						ipar.write(line.strip()+"\n")
@@ -537,14 +808,20 @@ if(os.path.isfile(output+"/"+treefn+"_G1.sitelh") and os.path.isfile(output+"/"+
 				opar = open(parfile,"w")
 				i = 0
 				while i < len(g1):
-					if g1[i] > g2[i] and g1[i]>g3[i]:
+					if i+1 in par1:
 						opar.write(str(i+1)+";"+treefn+"P1\n")
-					elif g2[i]>g3[i]:
+					elif i+1 in par2:
 						opar.write(str(i+1)+";"+treefn+"P2\n")
-					else:
+					elif i+1 in par3:
 						opar.write(str(i+1)+";"+treefn+"P3\n")
+					#if g1[i] > g2[i] and g1[i]>g3[i]:
+					#	opar.write(str(i+1)+";"+treefn+"P1\n")
+					#elif g2[i]>g3[i]:
+					#	opar.write(str(i+1)+";"+treefn+"P2\n")
+					#else:
+					#	opar.write(str(i+1)+";"+treefn+"P3\n")
 					i += 1
 				opar.close()
-			#os.system("rm "+output+"/"+treefn+"P*AICc*")
-			#os.system("rm "+output+"/"+treefn+"P2*")
+			os.system("rm "+output+"/"+treefn+"P*AICc*")
+
 		
