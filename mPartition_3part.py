@@ -515,6 +515,22 @@ def getAIC(fromFile):
 				text += line.split(" ")[5]
 				return text
 
+def getAICc(fromFile):
+	text = ""
+	with open(fromFile) as infile:
+		for line in infile:
+			if "Corrected Akaike information criterion (AICc) score:" in line.strip():
+				text += line.split(" ")[6]
+				return text
+
+def getBIC(fromFile):
+	text = ""
+	with open(fromFile) as infile:
+		for line in infile:
+			if "Bayesian information criterion (BIC) score:" in line.strip():
+				text += line.split(" ")[5]
+				return text
+
 #get n
 def getN(fromFile):
 	text = ""
@@ -601,6 +617,7 @@ if(os.path.isfile(output+"/"+treefn+"_G1.sitelh") and os.path.isfile(output+"/"+
 	par3 = []
 	i = 0
 	while i < len(g1):
+		#print(ivalue)
 		if (ivalue[i]==1):
 			pIdx = getParIdx(output+"/siteLH/"+treefn+".parsitelh",g1[i],g2[i],g3[i],2)
 		else:
@@ -727,20 +744,33 @@ if(os.path.isfile(output+"/"+treefn+"_G1.sitelh") and os.path.isfile(output+"/"+
 			command = iqtree_path+"iqtree -s "+output+"/"+treefn+"P3 -m MFP -fast -mset "+mset+" -t "+treefile+" -safe  -seed 0 -pre "+output+"/"+treefn+"P3_AICc\n"
 			os.system(command)
 		
-		aic = 0.0
-		k = 0.0
-		n = 0.0
+		# aic = 0.0
+		# k = 0.0
+		# n = 0.0
+		# files = [f for f in listdir(output)]
+		# for f in files:
+			# if (treefn+"P1_AICc.iqtree" in f) or (treefn+"P2_AICc.iqtree" in f)  or (treefn+"P3_AICc.iqtree" in f):
+				# n += float(getN(output+"/"+f))
+				# k += float(getK(output+"/"+f))
+				# aic += float(getAIC(output+"/"+f))
+		# AICc = aic + 2*k*(k+1)/(n-k-1)
+		# FirstAICc = 0
+		# if(os.path.isfile(output+"/"+treefn+"_AICc.iqtree")):
+			# FirstAICc = float(getAICc(output+"/"+treefn+"_AICc.iqtree"))
+		# print "FirstAICc: "+str(FirstAICc)+" | New AICc: "+str(AICc)
+		
+		bic = 0.0
 		files = [f for f in listdir(output)]
 		for f in files:
 			if (treefn+"P1_AICc.iqtree" in f) or (treefn+"P2_AICc.iqtree" in f)  or (treefn+"P3_AICc.iqtree" in f):
-				n += float(getN(output+"/"+f))
-				k += float(getK(output+"/"+f))
-				aic += float(getAIC(output+"/"+f))
-		AICc = aic + 2*k*(k+1)/(n-k-1)
-		FirstAICc = 0
+				#n += float(getN(output+"/"+f))
+				#k += float(getK(output+"/"+f))
+				bic += float(getBIC(output+"/"+f))
+		#BIC = aic + 2*k*(k+1)/(n-k-1)
+		FirstBIC = 0
 		if(os.path.isfile(output+"/"+treefn+"_AICc.iqtree")):
-			FirstAICc = float(getAIC(output+"/"+treefn+"_AICc.iqtree"))
-		print "FirstAICc: "+str(FirstAICc)+" | New AICc: "+str(AICc)
+			FirstBIC = float(getBIC(output+"/"+treefn+"_AICc.iqtree"))
+		print "FirstAICc: "+str(FirstBIC)+" | New AICc: "+str(bic)
 		
 		checkAICcFile = 1
 		if ((not os.path.isfile(output+"/"+treefn+"P1_AICc.iqtree")) and os.path.isfile(output+"/"+treefn+"P1")):
@@ -765,7 +795,7 @@ if(os.path.isfile(output+"/"+treefn+"_G1.sitelh") and os.path.isfile(output+"/"+
 			os.system("rm "+output+"/"+treefn+"P*")
 			os.system("rm core.*")
 			os.system("rm "+output+"/core.*")
-		elif AICc > FirstAICc:
+		elif bic > FirstBIC:
 			print "Worser."
 			os.system("cp "+output+"/"+treefn+"P*.log logs/")			
 			os.system("rm "+output+"/"+treefn+"P*")
@@ -822,6 +852,6 @@ if(os.path.isfile(output+"/"+treefn+"_G1.sitelh") and os.path.isfile(output+"/"+
 					#	opar.write(str(i+1)+";"+treefn+"P3\n")
 					i += 1
 				opar.close()
-			os.system("rm "+output+"/"+treefn+"P*AICc*")
+			#os.system("rm "+output+"/"+treefn+"P*AICc*")
 
 		

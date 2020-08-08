@@ -44,29 +44,28 @@ for ll in cdna:
 			if len(ll.split(" ",1)[1].strip()) == ll.split(" ",1)[1].strip().count("-") or len(ll.split(" ",1)[1].strip()) == ll.split(" ",1)[1].strip().count("N"):
 				zz = zz-1
 			else:
-				seq = ll.split(" ",1)[1].strip().replace("A","").replace("T","").replace("G","").replace("C","").replace("X","").replace("-","").replace("N","")
-				if len(seq) > 0:
-					prot = 0
-				else:
+				if len(ll.split(" ",1)[1].strip())*8/10 < (ll.split(" ",1)[1].strip().count("-") + ll.split(" ",1)[1].strip().count("A") + ll.split(" ",1)[1].strip().count("T") + ll.split(" ",1)[1].strip().count("G") + ll.split(" ",1)[1].strip().count("C") + ll.split(" ",1)[1].strip().count("N")):
 					prot = 1
+				else:
+					prot = 0 
 		elif "\t" in ll:
 			if len(ll.split("\t",1)[1].strip()) == ll.split("\t",1)[1].strip().count("-") or len(ll.split("\t",1)[1].strip()) == ll.split("\t",1)[1].strip().count("N"):
 				zz = zz-1
 			else:
-				seq = ll.split("\t",1)[1].strip().replace("A","").replace("T","").replace("G","").replace("C","").replace("X","").replace("-","").replace("N","")
-				#print(seq)
-				if len(seq) > 0:
-					prot = 0
-				else:
+				if len(ll.split("\t",1)[1].strip())*8/10 < (ll.split("\t",1)[1].strip().count("-") + ll.split("\t",1)[1].strip().count("A") + ll.split("\t",1)[1].strip().count("T") + ll.split("\t",1)[1].strip().count("G") + ll.split("\t",1)[1].strip().count("C") + ll.split("\t",1)[1].strip().count("N")):
 					prot = 1
+				else:
+					prot = 0 
 	zz += 1
 cdna.close()
-
+ndna = 1
 mset = "JC69,F81,HKY,GTR"
-#if prot == 0:
-#	mset = "LG,WAG,JTT"
-#else:
-#	mset = "JC69,F81,HKY,GTR"
+if prot == 0:
+	mset = "LG,WAG,JTT"
+	ndna = 1
+else:
+	mset = "JC69,F81,HKY,GTR"
+	ndna = 0
 if args.mset:
 	mset = args.mset
 
@@ -136,7 +135,7 @@ print("mset: "+mset)
 while len(alignList) > 0:
 	for align in alignList:
 		if num_run == 1 and len(alignList) == 1:
-			command = "python mPartition_3part.py -f "+align+" -m "+str(maxlength)+" -tper "+str(tper)+" -mset "+mset+" -o "+output
+			command = "python mPartition_3part.py -f "+align+" -m "+str(maxlength)+" -tper "+str(tper)+" -mset "+mset+" -o "+output+" -prot "+str(ndna)
 			os.system(command)
 
 			extS = 0
@@ -156,7 +155,7 @@ while len(alignList) > 0:
 			parfile = output + "/par."+treefn
 			tiger_file = "rate_"+treefn
 			inv_file = "inv_"+treefn
-			command = "python mPartition_3part.py -f "+align+" -m "+str(maxlength)+" -tiger "+tiger_file+" -inv"+inv_file+" -tper "+str(tper)+" -mset "+mset+" -t "+treefile+" -p "+parfile+" -o "+output
+			command = "python mPartition_3part.py -f "+align+" -m "+str(maxlength)+" -tiger "+tiger_file+" -inv "+inv_file+" -tper "+str(tper)+" -mset "+mset+" -t "+treefile+" -p "+parfile+" -o "+output+" -prot "+str(ndna)
 
 			os.system(command)
 			extS = 0
@@ -176,6 +175,12 @@ while len(alignList) > 0:
 	num_run += 1
 print("Mission Completed.")
 
+ivalue=[]
+invfile = open(output+"/inv_"+treefn,"r")
+for line in invfile:
+	ivalue.append(int(line.strip()))
+invfile.close()
+
 if(os.path.isfile(output + "/par."+treefn)):
 	par = open(output + "/par."+treefn,"r")
 	for line in par:
@@ -186,6 +191,29 @@ if(os.path.isfile(output + "/par."+treefn)):
 	par.close()
 	if(os.path.isfile(output + "/Results/par."+treefn)):
 		os.system("rm "+output + "/Results/par."+treefn)
+	
+	tempinv = []
+	for file in os.listdir(output):
+		if "par."+treefn+"_parf_" in file:
+			wp = open(output+"/"+file,"r")
+			sitev = []
+			for line in wp:
+				sitev = line.strip().split(" ")
+			wp.close()
+			ii = 0
+			for x in sitev:
+				if(ivalue[int(x)-1] == 1):
+					ii += 1
+			if (ii == len(sitev)):
+				for x in sitev:
+					tempinv.append(int(x))
+				os.system("rm "+output+"/"+file)
+	if len(tempinv) > 0:
+		tempinv.sort()
+		vfile = open(output+"/par."+treefn+"_parf_ParInv","a+")
+		for iz in tempinv:
+			vfile.write(str(iz)+" ")
+		vfile.close()
 	finishParfile = open(output + "/Results/par."+treefn,"a+")
 	finishParfile.write("#nexus\nbegin sets;\n")
 	for file in os.listdir(output):
@@ -194,6 +222,7 @@ if(os.path.isfile(output + "/par."+treefn)):
 			wp = open(output+"/"+file,"r")
 			for line in wp:
 				finishParfile.write(line.strip()+";\n")
+			wp.close()
 	finishParfile.write("end;\n")
 	finishParfile.close()	
 	os.system("rm "+output + "/par."+treefn+"_parf_*")
@@ -207,10 +236,8 @@ else:
 		finishParfile.write("end;\n")
 		finishParfile.close()	
 
-os.system("rm *"+treefn+"*.bsub")
 os.system("rm "+output+"/"+treefn+"*")
 
 if(not os.path.isdir("Results")):
 	os.system("mkdir Results")
-os.system("cp "+output+"/Results/*.* Results/")
-os.system("rm -rf "+output+"/Results")
+os.system("cp "+output+"/Results/par."+treefn+" Results/")
