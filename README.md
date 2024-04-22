@@ -28,7 +28,7 @@ The partition scheme will be written to the file Results/par.[alignment]
 &emsp;&emsp;&emsp;The default model set for DNA: JC69,F81,HKY,GTR; and for amino acid: LG,JTT,WAG.<br>
 <br><i><b>Example:</b> python mPartition.py -f example.phy</i>
 
-New version (16/01/2024): https://github.com/thulekm/mPartition/releases
+New version: https://github.com/thulekm/mPartition/releases
 using IQTREE2
  
 
